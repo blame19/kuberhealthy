@@ -86,6 +86,7 @@ data:
     enableInflux: false # Set to true to enable metric forwarding to Infux DB
     jobCleanupDuration: 15m
     maxCheckPods: 4
+    failedPodCleanupDuration: 120h
 ---
 # Source: kuberhealthy/templates/khcheck-daemonset.yaml
 apiVersion: v1
@@ -195,20 +196,6 @@ rules:
 apiVersion: "rbac.authorization.k8s.io/v1"
 kind: ClusterRoleBinding
 metadata:
-  name: kuberhealthy
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: kuberhealthy
-subjects:
-- kind: ServiceAccount
-  name: kuberhealthy
-  namespace: kuberhealthy
----
-# Source: kuberhealthy/templates/clusterrolebinding.yaml
-apiVersion: "rbac.authorization.k8s.io/v1"
-kind: ClusterRoleBinding
-metadata:
   name: kuberhealthy-daemonset-khcheck
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -217,6 +204,20 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: daemonset-khcheck
+  namespace: kuberhealthy
+---
+# Source: kuberhealthy/templates/clusterrolebinding.yaml
+apiVersion: "rbac.authorization.k8s.io/v1"
+kind: ClusterRoleBinding
+metadata:
+  name: kuberhealthy
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kuberhealthy
+subjects:
+- kind: ServiceAccount
+  name: kuberhealthy
   namespace: kuberhealthy
 ---
 # Source: kuberhealthy/templates/khcheck-daemonset.yaml
@@ -321,7 +322,7 @@ metadata:
   namespace: kuberhealthy
   annotations:
     prometheus.io/scrape: "true"
-    prometheus.io/port: "80"
+    prometheus.io/port: "8080"
     prometheus.io/path: "/metrics"
 spec:
   type: ClusterIP
@@ -364,7 +365,7 @@ spec:
       serviceAccountName: kuberhealthy
       automountServiceAccountToken: true
       containers:
-      - image: kuberhealthy/kuberhealthy:v2.4.0
+      - image: kuberhealthy/kuberhealthy:v2.4.1
         command: [/app/kuberhealthy]
         ports:
         - containerPort: 8080
@@ -504,7 +505,7 @@ spec:
                 fieldPath: spec.nodeName
           - name: HOSTNAME
             value: "kubernetes.default"
-        image: kuberhealthy/dns-resolution-check:v1.4.2
+        image: kuberhealthy/dns-resolution-check:v1.4.3
         imagePullPolicy: IfNotPresent
         name: main
         resources:
